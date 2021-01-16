@@ -59,5 +59,8 @@ Implementation of the cross-platform view controller
 - (IBAction)OnMoveCamPosScrollBar:(NSSlider *)sender {
 	[_renderer onMoveCamPosSlider:sender];
 }
+- (IBAction)OnAnimSpeedSlider:(NSSlider *)sender {
+	[_renderer onAnimSpeedSlider:sender];
+}
 
 @end
