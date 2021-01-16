@@ -490,7 +490,7 @@ static const float         ActorRotationSpeed       = 1 * speed_factor;
     MTKMeshBufferAllocator *meshBufferAllocator =
         [[MTKMeshBufferAllocator alloc] initWithDevice:_device];
 
-    MDLMesh* mdlSphere = [MDLMesh newEllipsoidWithRadii: 200.0
+    MDLMesh* mdlSphere = [MDLMesh newEllipsoidWithRadii: 100.0
                                          radialSegments: 30
                                        verticalSegments: 20
                                            geometryType: MDLGeometryTypeTriangles
@@ -526,7 +526,7 @@ static const float         ActorRotationSpeed       = 1 * speed_factor;
                                                                 error: &error ];
     
     
-    MDLMesh* mdlWall = [MDLMesh newBoxWithDimensions:{10000.f,10000.f,10000.f} segments:{1,1,1} geometryType:MDLGeometryTypeTriangles inwardNormals:true allocator:meshBufferAllocator];
+    MDLMesh* mdlWall = [MDLMesh newBoxWithDimensions:{100.f,300.f,300.f} segments:{1,1,1} geometryType:MDLGeometryTypeTriangles inwardNormals:false allocator:meshBufferAllocator];
 
     vector_float4 wallBSphere;
     wallBSphere.xyz = (vector_float3){0,0,0};
@@ -537,6 +537,18 @@ static const float         ActorRotationSpeed       = 1 * speed_factor;
                                                 metalKitTextureLoader: NULL
                                                           metalDevice: _device
                                                                 error: &error ];
+	
+	MDLMesh* mdlTallWall = [MDLMesh newBoxWithDimensions:{100.f,3000.f,300.f} segments:{1,1,1} geometryType:MDLGeometryTypeTriangles inwardNormals:false allocator:meshBufferAllocator];
+
+	vector_float4 tallWallBSphere;
+	tallWallBSphere.xyz = (vector_float3){0,0,0};
+	tallWallBSphere.w = 1415.f;
+
+	NSArray <AAPLMesh*>* tallWallMeshes = [AAPLMesh newMeshesFromObject: mdlTallWall
+											  modelIOVertexDescriptor: modelIOVertexDescriptor
+												metalKitTextureLoader: NULL
+														  metalDevice: _device
+																error: &error ];
     
     NSAssert(groundMeshes, @"Could not create ground meshes: %@", error);
 
@@ -606,13 +618,62 @@ static const float         ActorRotationSpeed       = 1 * speed_factor;
     _actorData.lastObject.translation       = (vector_float3) {0.f, 0.f, 0.f};
     _actorData.lastObject.rotationPoint     = SceneCenter + (vector_float3){0.f, 0, 0.f};
     _actorData.lastObject.rotationAmount    = 0.f;
-    _actorData.lastObject.rotationSpeed     = 0.f;
+    _actorData.lastObject.rotationSpeed     = 5.f;
     _actorData.lastObject.rotationAxis      = (vector_float3) {0.f, 1.f, 0.f};
     _actorData.lastObject.diffuseMultiplier = (vector_float3) {1.f, 1.f, 1.f};
     _actorData.lastObject.bSphere           = wallBSphere;
     _actorData.lastObject.gpuProg           = wallPipelineState;
-    _actorData.lastObject.meshes            = wallMeshes;
+    _actorData.lastObject.meshes            = sphereMeshes;
     _actorData.lastObject.passFlags         = EPassFlags::ALL_PASS;
+	
+	[_actorData addObject:[AAPLActorData new]];
+	_actorData.lastObject.translation       = (vector_float3) {0.f, 0.f, 0.f};
+	_actorData.lastObject.rotationPoint     = SceneCenter + (vector_float3){0.f, 0, 3000.f};
+	_actorData.lastObject.rotationAmount    = 0.f;
+	_actorData.lastObject.rotationSpeed     = 2.f;
+	_actorData.lastObject.rotationAxis      = (vector_float3) {0.f, 1.f, 0.f};
+	_actorData.lastObject.diffuseMultiplier = (vector_float3) {1.f, 1.f, 1.f};
+	_actorData.lastObject.bSphere           = tallWallBSphere;
+	_actorData.lastObject.gpuProg           = wallPipelineState;
+	_actorData.lastObject.meshes            = tallWallMeshes;
+	_actorData.lastObject.passFlags         = EPassFlags::ALL_PASS;
+	
+	[_actorData addObject:[AAPLActorData new]];
+	_actorData.lastObject.translation       = (vector_float3) {0.f, 0.f, 0.f};
+	_actorData.lastObject.rotationPoint     = SceneCenter + (vector_float3){2500.f, 0, -2500.f};
+	_actorData.lastObject.rotationAmount    = 0.f;
+	_actorData.lastObject.rotationSpeed     = 2.f;
+	_actorData.lastObject.rotationAxis      = (vector_float3) {0.f, 1.f, 0.f};
+	_actorData.lastObject.diffuseMultiplier = (vector_float3) {1.f, 1.f, 1.f};
+	_actorData.lastObject.bSphere           = tallWallBSphere;
+	_actorData.lastObject.gpuProg           = wallPipelineState;
+	_actorData.lastObject.meshes            = tallWallMeshes;
+	_actorData.lastObject.passFlags         = EPassFlags::ALL_PASS;
+	
+	[_actorData addObject:[AAPLActorData new]];
+	_actorData.lastObject.translation       = (vector_float3) {0.f, 0.f, 0.f};
+	_actorData.lastObject.rotationPoint     = SceneCenter + (vector_float3){2500.f, 0, 2500.f};
+	_actorData.lastObject.rotationAmount    = 0.f;
+	_actorData.lastObject.rotationSpeed     = 1.f;
+	_actorData.lastObject.rotationAxis      = (vector_float3) {0.f, 1.f, 0.f};
+	_actorData.lastObject.diffuseMultiplier = (vector_float3) {1.f, 1.f, 1.f};
+	_actorData.lastObject.bSphere           = tallWallBSphere;
+	_actorData.lastObject.gpuProg           = wallPipelineState;
+	_actorData.lastObject.meshes            = tallWallMeshes;
+	_actorData.lastObject.passFlags         = EPassFlags::ALL_PASS;
+	
+	[_actorData addObject:[AAPLActorData new]];
+	_actorData.lastObject.translation       = (vector_float3) {0.f, 0.f, 0.f};
+	_actorData.lastObject.rotationPoint     = SceneCenter + (vector_float3){-3500.f, 0, 3500.f};
+	_actorData.lastObject.rotationAmount    = 0.f;
+	_actorData.lastObject.rotationSpeed     = 1.f;
+	_actorData.lastObject.rotationAxis      = (vector_float3) {0.f, 1.f, 0.f};
+	_actorData.lastObject.diffuseMultiplier = (vector_float3) {1.f, 1.f, 1.f};
+	_actorData.lastObject.bSphere           = tallWallBSphere;
+	_actorData.lastObject.gpuProg           = wallPipelineState;
+	_actorData.lastObject.meshes            = tallWallMeshes;
+	_actorData.lastObject.passFlags         = EPassFlags::ALL_PASS;
+
 
     {
         MTLRenderPipelineDescriptor *renderDescriptor = [[MTLRenderPipelineDescriptor alloc] init];
@@ -863,7 +924,7 @@ static const float         ActorRotationSpeed       = 1 * speed_factor;
         renderEncoder.label = @"GBufferPass";
         
 
-        [renderEncoder setCullMode:MTLCullModeNone];
+        //[renderEncoder setCullMode:MTLCullModeNone];
         [self drawActors: renderEncoder ];
 
         

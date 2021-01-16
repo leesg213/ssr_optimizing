@@ -47,7 +47,7 @@ vertex ColorInOut vertexTransform (const Vertex in                              
     float4 worldPos  = modelMatrix * float4(in.position, 1.0);
     float4 screenPos = viewportParams[0].viewProjectionMatrix * worldPos;
 
-    out.worldPos = (half3)worldPos.xyz;
+    out.worldPos = (half3)in.position.xyz;
     out.position = screenPos;
 
 	float4x4 normalMatrix = modelMatrix;//float4x4(viewMatrix * modelMatrix);
@@ -249,7 +249,7 @@ fragment GBufferOut fragmentWallGBuffer(         ColorInOut      in             
     
     float onEdge;
     {
-        float2 onEdge2d = fract(float2(in.worldPos.xy)/250.f);
+        float2 onEdge2d = min(fract(float2(in.worldPos.xy)/(250.f/8)),fract(float2(in.worldPos.xz)/(250.f/8)));
         // If onEdge2d is negative, we want 1. Otherwise, we want zero (independent for each axis).
         float2 offset2d = sign(onEdge2d) * -0.5 + 0.5;
         onEdge2d += offset2d;
@@ -260,13 +260,13 @@ fragment GBufferOut fragmentWallGBuffer(         ColorInOut      in             
 
     float3 neutralColor = float3(in.normal)*0.5 + 0.5;
     float3 edgeColor = neutralColor * 0.2;
-    float3 groundColor = mix (edgeColor, neutralColor, onEdge)*2;
+    float3 groundColor = mix (edgeColor, neutralColor, onEdge);
     
     float4 normal_refl_mask = 0;
     float4 diffuse = 0;
     
     normal_refl_mask.xyz = normalize(float3(in.normal));
-    normal_refl_mask.w = 0;
+    normal_refl_mask.w = 1;
     
     out.normal_refl_mask = normal_refl_mask;
     out.diffuse = float4(groundColor, 1);
