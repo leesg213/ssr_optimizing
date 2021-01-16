@@ -15,7 +15,7 @@ using namespace metal;
 #define STEP_SIZE 2
 #define MAX_THICKNESS 0.001
 
-// Compute the position and the reflection direction of the sample in texture space.
+// Compute the position, the reflection direction, maxTraceDistance of the sample in texture space.
 void ComputePosAndReflection(uint2 tid,
                              const constant SceneInfo& sceneInfo,
                              float3 vSampleNormalInVS,
@@ -25,7 +25,7 @@ void ComputePosAndReflection(uint2 tid,
                              thread float& outMaxDistance)
 {
     float sampleDepth = tex_depth.read(tid).x;
-    float4 samplePosInCS =  float4((float2(tid)/sceneInfo.ViewSize)*2-1.0f, sampleDepth, 1);
+    float4 samplePosInCS =  float4(((float2(tid)+0.5)/sceneInfo.ViewSize)*2-1.0f, sampleDepth, 1);
     samplePosInCS.y *= -1;
 
     float4 samplePosInVS = sceneInfo.InvProjMat * samplePosInCS;
@@ -35,6 +35,7 @@ void ComputePosAndReflection(uint2 tid,
     float4 vReflectionInVS = float4(reflect(vCamToSampleInVS.xyz, vSampleNormalInVS.xyz),0);
 
     float4 vReflectionEndPosInVS = samplePosInVS + vReflectionInVS * 1000;
+	vReflectionEndPosInVS /= (vReflectionEndPosInVS.z < 0 ? vReflectionEndPosInVS.z : 1);
     float4 vReflectionEndPosInCS = sceneInfo.ProjMat * float4(vReflectionEndPosInVS.xyz, 1);
     vReflectionEndPosInCS /= vReflectionEndPosInCS.w;
     float3 vReflectionDir = normalize((vReflectionEndPosInCS - samplePosInCS).xyz);
@@ -54,7 +55,7 @@ void ComputePosAndReflection(uint2 tid,
     outMaxDistance = min(outMaxDistance, (1-outSamplePosInTS.z)/outReflDirInTS.z);
 }
 
-bool FindIntersection_Linear(float3 samplePosInTS,
+float FindIntersection_Linear(float3 samplePosInTS,
                              float3 vReflDirInTS,
                              float maxTraceDistance,
                              texture2d<float, access::sample> tex_depth,
@@ -77,7 +78,7 @@ bool FindIntersection_Linear(float3 samplePosInTS,
 	float4 rayStartPos = rayPosInTS;
 
     int32_t hitIndex = -1;
-    for(int i = 0;i<max_dist && i<MAX_ITERATION;i += 4)
+    for(int i = 0;i<=max_dist && i<MAX_ITERATION;i += 4)
     {
         float depth0 = 0;
         float depth1 = 0;
@@ -118,8 +119,10 @@ bool FindIntersection_Linear(float3 samplePosInTS,
 
     bool intersected = hitIndex >= 0;
     intersection = rayStartPos.xyz + vRayDirInTS.xyz * hitIndex;
-     
-    return intersected;
+	
+	float intensity = intersected ? 1 : 0;
+	
+    return intensity;
 }
 
 // hi-z with min-z buffer
@@ -173,7 +176,7 @@ bool crossedCellBoundary(float2 oldCellIndex, float2 newCellIndex)
 	return (oldCellIndex.x != newCellIndex.x) || (oldCellIndex.y != newCellIndex.y);
 }
 
-bool FindIntersection_HiZ(float3 samplePosInTS,
+float FindIntersection_HiZ(float3 samplePosInTS,
                          float3 vReflDirInTS,
                           float maxTraceDistance,
                          texture2d<float, access::sample> tex_hi_z,
@@ -197,13 +200,13 @@ bool FindIntersection_HiZ(float3 samplePosInTS,
 	float3 o = ray;
     float2 rayCell = getCell(ray.xy, startCellCount);
 
-    ray = intersectCellBoundary(o, d, rayCell, startCellCount, crossStep, crossOffset, minZ, maxZ);
+    ray = intersectCellBoundary(o, d, rayCell, startCellCount, crossStep, crossOffset*64, minZ, maxZ);
     
     const int maxLevel = tex_hi_z.get_num_mip_levels()-1;
     
     int level = startLevel;
     int iter = 0;
-    while(level >=stopLevel && ray.z <= maxZ && iter<MAX_ITERATION)
+    while(level >=stopLevel && ray.z <= maxZ)
     {
         const float2 cellCount = getCellCount(level, tex_hi_z);
         const float2 oldCellIdx = getCell(ray.xy, cellCount);
@@ -221,17 +224,23 @@ bool FindIntersection_HiZ(float3 samplePosInTS,
         iter = iter + 1;
     }
     
-    bool intersected = level < stopLevel && ray.y < 1;
+    bool intersected = level < stopLevel;
     intersection = ray;
+	
+	float intensity = intersected ? 1 : 0;
     
-    return intersected;
+    return intensity;
 }
 
-float4 ComputeReflectedColor(float3 intersection,
+float4 ComputeReflectedColor(float intensity,
+							 float3 intersection,
+							 float4 skyColor,
                              texture2d<float, access::sample> tex_scene_color)
 {
     constexpr sampler pointSampler(mip_filter::nearest);
-    return float4(tex_scene_color.sample(pointSampler, intersection.xy));
+    float4 ssr_color = float4(tex_scene_color.sample(pointSampler, intersection.xy));
+	
+	return mix(skyColor, ssr_color, intensity);
 }
 
 kernel void kernel_screen_space_reflection_linear(texture2d<float, access::sample> tex_normal_refl_mask [[texture(0)]],
@@ -249,24 +258,27 @@ kernel void kernel_screen_space_reflection_linear(texture2d<float, access::sampl
 	float3 normal = (sceneInfo.ViewMat * normalInWS).xyz;
     float reflection_mask = NormalAndReflectionMask.w;
 
-    float4 reflectionColor = 0;
-    if(reflection_mask != 0)
-    {
+	float4 skyColor = float4(0,0,1,1);
+	
+	float4 reflectionColor = 0;
+	if(reflection_mask != 0)
+	{
+		reflectionColor = skyColor;
         float3 samplePosInTS = 0;
         float3 vReflDirInTS = 0;
         float maxTraceDistance = 0;
 
-        // Compute the position and the reflection vector of this sample in texture space.
+        // Compute the position, the reflection vector, maxTraceDistance of this sample in texture space.
         ComputePosAndReflection(tid, sceneInfo, normal, tex_depth, samplePosInTS, vReflDirInTS, maxTraceDistance);
 
         // Find intersection in texture space by tracing the reflection ray
         float3 intersection = 0;
 		if(vReflDirInTS.z>0.0)
 		{
-			bool intersected = FindIntersection_Linear(samplePosInTS, vReflDirInTS, maxTraceDistance, tex_depth, sceneInfo, intersection);
+			float intensity = FindIntersection_Linear(samplePosInTS, vReflDirInTS, maxTraceDistance, tex_depth, sceneInfo, intersection);
 			
 			// Compute reflection color if intersected
-			reflectionColor = intersected ? ComputeReflectedColor(intersection, tex_scene_color) : 0;
+			reflectionColor = ComputeReflectedColor(intensity, intersection, skyColor, tex_scene_color);
 		}
     }
 
@@ -292,23 +304,26 @@ kernel void kernel_screen_space_reflection_hi_z(texture2d<float, access::sample>
 	float3 normal = (sceneInfo.ViewMat * normalInWS).xyz;
     float reflection_mask = NormalAndReflectionMask.w;
     
+	float4 skyColor = float4(0,0,1,1);
+	
     float4 reflectionColor = 0;
     if(reflection_mask != 0)
     {
+		reflectionColor = skyColor;
         float3 samplePosInTS = 0;
         float3 vReflDirInTS = 0;
         float maxTraceDistance = 0;
-        // Compute the position and the reflection vector of this sample in texture space.
+        // Compute the position, the reflection vector, maxTraceDistance of this sample in texture space.
         ComputePosAndReflection(tid, sceneInfo, normal, tex_hi_z, samplePosInTS, vReflDirInTS, maxTraceDistance);
         
         // Find intersection in texture space by tracing the reflection ray
         float3 intersection = 0;
         if(vReflDirInTS.z>0.0)
         {
-            bool intersected = FindIntersection_HiZ(samplePosInTS, vReflDirInTS, maxTraceDistance, tex_hi_z, sceneInfo, intersection);
+            float intensity = FindIntersection_HiZ(samplePosInTS, vReflDirInTS, maxTraceDistance, tex_hi_z, sceneInfo, intersection);
             
             // Compute reflection color if intersected
-            reflectionColor = intersected ? ComputeReflectedColor(intersection, tex_scene_color) : 0;
+			reflectionColor = ComputeReflectedColor(intensity,intersection, skyColor, tex_scene_color);
         }
     }
     
