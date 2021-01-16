@@ -26,9 +26,9 @@ static const NSUInteger    CubemapResolution        = 256;
 static const vector_float3 SceneCenter              = (vector_float3){0.f, -250.f, 1000.f};
 vector_float3 CameraDistanceFromCenter = (vector_float3){0.f, 10.f, -550.f};
 static const vector_float3 CameraRotationAxis       = (vector_float3){0,1,0};
-static const float speed_factor = 1;
-static const float         CameraRotationSpeed      = 0.0025f * speed_factor;
-static const float         ActorRotationSpeed       = 1 * speed_factor;
+float anim_speed_factor = 0.5f;
+static const float         CameraRotationSpeed      = 0.0025f;
+static const float         ActorRotationSpeed       = 1;
 
 #define SSR_HI_Z 1	
 
@@ -81,6 +81,7 @@ static const float         ActorRotationSpeed       = 1 * speed_factor;
 
     vector_float2 _viewSize;
 	
+	bool _AnimationEnabled;
 	bool _SSREnabled;
 	bool _SSRTechinque; // true : linear false : hi-z
 }
@@ -105,10 +106,14 @@ static const float         ActorRotationSpeed       = 1 * speed_factor;
 	float camPos = camPosMin + (camPosMax - camPosMin) * ratio;
 	
 	CameraDistanceFromCenter.y = camPos;
+}
+-(void)onAnimSpeedSlider:(NSSlider *)slider
+{
+	float ratio = slider.floatValue / 100.0f;
+	float speed_min = 0;
+	float speed_max = 2;
 	
-	printf("value : %f\n", slider.floatValue);
-	
-	
+	anim_speed_factor = speed_min + (speed_max - speed_min) * ratio;
 }
 - (nonnull instancetype)initWithMetalKitView:(nonnull MTKView *)mtkView
 {
@@ -122,6 +127,7 @@ static const float         ActorRotationSpeed       = 1 * speed_factor;
 		
 		_SSREnabled = false;
 		_SSRTechinque = true;
+		_AnimationEnabled = false;
     }
 
     return self;
@@ -616,7 +622,7 @@ static const float         ActorRotationSpeed       = 1 * speed_factor;
     
     [_actorData addObject:[AAPLActorData new]];
     _actorData.lastObject.translation       = (vector_float3) {0.f, 0.f, 0.f};
-    _actorData.lastObject.rotationPoint     = SceneCenter + (vector_float3){0.f, 0, 0.f};
+    _actorData.lastObject.rotationPoint     = SceneCenter + (vector_float3){200.f, -120, 200.f};
     _actorData.lastObject.rotationAmount    = 0.f;
     _actorData.lastObject.rotationSpeed     = 5.f;
     _actorData.lastObject.rotationAxis      = (vector_float3) {0.f, 1.f, 0.f};
@@ -632,9 +638,9 @@ static const float         ActorRotationSpeed       = 1 * speed_factor;
 	_actorData.lastObject.rotationAmount    = 0.f;
 	_actorData.lastObject.rotationSpeed     = 2.f;
 	_actorData.lastObject.rotationAxis      = (vector_float3) {0.f, 1.f, 0.f};
-	_actorData.lastObject.diffuseMultiplier = (vector_float3) {1.f, 1.f, 1.f};
+	_actorData.lastObject.diffuseMultiplier = (vector_float3) {0.f, 2.f, 2.f};
 	_actorData.lastObject.bSphere           = tallWallBSphere;
-	_actorData.lastObject.gpuProg           = wallPipelineState;
+	_actorData.lastObject.gpuProg           = templePipelineState;
 	_actorData.lastObject.meshes            = tallWallMeshes;
 	_actorData.lastObject.passFlags         = EPassFlags::ALL_PASS;
 	
@@ -644,9 +650,9 @@ static const float         ActorRotationSpeed       = 1 * speed_factor;
 	_actorData.lastObject.rotationAmount    = 0.f;
 	_actorData.lastObject.rotationSpeed     = 2.f;
 	_actorData.lastObject.rotationAxis      = (vector_float3) {0.f, 1.f, 0.f};
-	_actorData.lastObject.diffuseMultiplier = (vector_float3) {1.f, 1.f, 1.f};
+	_actorData.lastObject.diffuseMultiplier = (vector_float3) {2.f, 2.f, 0.f};
 	_actorData.lastObject.bSphere           = tallWallBSphere;
-	_actorData.lastObject.gpuProg           = wallPipelineState;
+	_actorData.lastObject.gpuProg           = templePipelineState;
 	_actorData.lastObject.meshes            = tallWallMeshes;
 	_actorData.lastObject.passFlags         = EPassFlags::ALL_PASS;
 	
@@ -656,21 +662,21 @@ static const float         ActorRotationSpeed       = 1 * speed_factor;
 	_actorData.lastObject.rotationAmount    = 0.f;
 	_actorData.lastObject.rotationSpeed     = 1.f;
 	_actorData.lastObject.rotationAxis      = (vector_float3) {0.f, 1.f, 0.f};
-	_actorData.lastObject.diffuseMultiplier = (vector_float3) {1.f, 1.f, 1.f};
+	_actorData.lastObject.diffuseMultiplier = (vector_float3) {0.f, 2.f, 0.f};
 	_actorData.lastObject.bSphere           = tallWallBSphere;
-	_actorData.lastObject.gpuProg           = wallPipelineState;
+	_actorData.lastObject.gpuProg           = templePipelineState;
 	_actorData.lastObject.meshes            = tallWallMeshes;
 	_actorData.lastObject.passFlags         = EPassFlags::ALL_PASS;
 	
 	[_actorData addObject:[AAPLActorData new]];
-	_actorData.lastObject.translation       = (vector_float3) {0.f, 0.f, 0.f};
+	_actorData.lastObject.translation       = (vector_float3) {0.f, 300.f, 0.f};
 	_actorData.lastObject.rotationPoint     = SceneCenter + (vector_float3){-3500.f, 0, 3500.f};
 	_actorData.lastObject.rotationAmount    = 0.f;
 	_actorData.lastObject.rotationSpeed     = 1.f;
 	_actorData.lastObject.rotationAxis      = (vector_float3) {0.f, 1.f, 0.f};
-	_actorData.lastObject.diffuseMultiplier = (vector_float3) {1.f, 1.f, 1.f};
+	_actorData.lastObject.diffuseMultiplier = (vector_float3) {2.f, 0.f, 0.f};
 	_actorData.lastObject.bSphere           = tallWallBSphere;
-	_actorData.lastObject.gpuProg           = wallPipelineState;
+	_actorData.lastObject.gpuProg           = templePipelineState;
 	_actorData.lastObject.meshes            = tallWallMeshes;
 	_actorData.lastObject.passFlags         = EPassFlags::ALL_PASS;
 
@@ -712,7 +718,7 @@ static const float         ActorRotationSpeed       = 1 * speed_factor;
             _actorData[i].modelPosition = matrix_multiply(modelMatrix, (vector_float4) {0, 0, 0, 1});
 
             // we update the actor's rotation for next frame (cpu side) :
-            _actorData[i].rotationAmount += 0.004 * _actorData[i].rotationSpeed * ActorRotationSpeed;
+            _actorData[i].rotationAmount += 0.004 * _actorData[i].rotationSpeed * ActorRotationSpeed * anim_speed_factor;
 
             // we update the actor's shader parameters :
             actorParams[i].modelMatrix = modelMatrix;
@@ -724,7 +730,7 @@ static const float         ActorRotationSpeed       = 1 * speed_factor;
     {
         _cameraFinal.target   = SceneCenter;
 
-        _cameraFinal.rotation = fmod ((_cameraFinal.rotation + CameraRotationSpeed), M_PI*2.f);
+        _cameraFinal.rotation = fmod ((_cameraFinal.rotation + CameraRotationSpeed * anim_speed_factor), M_PI*2.f);
         matrix_float3x3 rotationMatrix = matrix3x3_rotation (_cameraFinal.rotation,  CameraRotationAxis);
 
         _cameraFinal.position = SceneCenter;

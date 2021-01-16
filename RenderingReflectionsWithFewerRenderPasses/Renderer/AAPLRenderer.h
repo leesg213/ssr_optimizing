@@ -14,4 +14,5 @@ Header for renderer class which performs Metal setup and per frame rendering
 -(void)onToggleSSRButton:(NSButton *)button;
 -(void)onToggleSSRTechniqueButton:(NSButton *)button;
 -(void)onMoveCamPosSlider:(NSSlider *)slider;
+-(void)onAnimSpeedSlider:(NSSlider *)slider;
 @end

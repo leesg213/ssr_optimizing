@@ -253,14 +253,14 @@ fragment GBufferOut fragmentWallGBuffer(         ColorInOut      in             
         // If onEdge2d is negative, we want 1. Otherwise, we want zero (independent for each axis).
         float2 offset2d = sign(onEdge2d) * -0.5 + 0.5;
         onEdge2d += offset2d;
-        onEdge2d = step (0.03, onEdge2d);
+        onEdge2d = step (0.1, onEdge2d);
 
         onEdge = min(onEdge2d.x, onEdge2d.y);
     }
 
     float3 neutralColor = float3(in.normal)*0.5 + 0.5;
     float3 edgeColor = neutralColor * 0.2;
-    float3 groundColor = mix (edgeColor, neutralColor, onEdge);
+    float3 groundColor = mix (edgeColor, neutralColor, onEdge)*0.5;
     
     float4 normal_refl_mask = 0;
     float4 diffuse = 0;
