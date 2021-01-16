@@ -146,6 +146,14 @@
                         <rect key="frame" x="0.0" y="0.0" width="800" height="600"/>
                         <autoresizingMask key="autoresizingMask"/>
                         <subviews>
+                            <slider horizontalHuggingPriority="750" id="pOr-9l-Rha" userLabel="AnimSpeedSlider">
+                                <rect key="frame" x="31" y="267" width="24" height="243"/>
+                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                                <sliderCell key="cell" continuous="YES" alignment="left" maxValue="100" doubleValue="50" tickMarkPosition="right" sliderType="linear" id="CRM-Da-D2L"/>
+                                <connections>
+                                    <action selector="OnAnimSpeedSlider:" target="XfG-lQ-9wD" id="D3d-fm-SUH"/>
+                                </connections>
+                            </slider>
                             <button verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="hd8-wX-9UG" userLabel="SSR_ToggleButton">
                                 <rect key="frame" x="21" y="553" width="116" height="32"/>
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
@@ -158,7 +166,7 @@
                                 </connections>
                             </button>
                             <slider horizontalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="0nC-YO-zhD" userLabel="MoveCamPosScrollBar">
-                                <rect key="frame" x="59" y="267" width="24" height="243"/>
+                                <rect key="frame" x="110" y="267" width="24" height="243"/>
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
                                 <sliderCell key="cell" continuous="YES" alignment="left" maxValue="100" tickMarkPosition="right" sliderType="linear" id="DJT-2T-HSH"/>
                                 <connections>
@@ -176,6 +184,24 @@
                                     <action selector="On_SSR_ToggleTechniqueButton:" target="XfG-lQ-9wD" id="SRz-12-6DJ"/>
                                 </connections>
                             </button>
+                            <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="zmr-ih-Il3">
+                                <rect key="frame" x="5" y="249" width="77" height="16"/>
+                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                                <textFieldCell key="cell" lineBreakMode="clipping" title="Anim Speed" id="7PD-7C-EoR">
+                                    <font key="font" metaFont="system"/>
+                                    <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
+                                    <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
+                                </textFieldCell>
+                            </textField>
+                            <textField horizontalHuggingPriority="251" verticalHuggingPriority="750" fixedFrame="YES" translatesAutoresizingMaskIntoConstraints="NO" id="7Ju-Di-BKi">
+                                <rect key="frame" x="87" y="249" width="70" height="16"/>
+                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                                <textFieldCell key="cell" lineBreakMode="clipping" title="Cam Angle" id="Wpx-rs-Q10">
+                                    <font key="font" metaFont="system"/>
+                                    <color key="textColor" name="labelColor" catalog="System" colorSpace="catalog"/>
+                                    <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
+                                </textFieldCell>
+                            </textField>
                         </subviews>
                     </view>
                 </viewController>
