@@ -62,5 +62,8 @@ Implementation of the cross-platform view controller
 - (IBAction)OnAnimSpeedSlider:(NSSlider *)sender {
 	[_renderer onAnimSpeedSlider:sender];
 }
+- (IBAction)onMaxIterationSlider:(NSSlider *)sender {
+	[_renderer onMaxIterationSlider:sender];
+}
 
 @end
