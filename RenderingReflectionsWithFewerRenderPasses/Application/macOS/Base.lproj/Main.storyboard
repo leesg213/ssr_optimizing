@@ -202,6 +202,14 @@
                                     <color key="backgroundColor" name="textBackgroundColor" catalog="System" colorSpace="catalog"/>
                                 </textFieldCell>
                             </textField>
+                            <slider horizontalHuggingPriority="750" id="iWR-6e-whi" userLabel="MaxIterationSlider">
+                                <rect key="frame" x="193" y="267" width="24" height="243"/>
+                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMinY="YES"/>
+                                <sliderCell key="cell" continuous="YES" alignment="left" maxValue="1000" doubleValue="500" tickMarkPosition="right" sliderType="linear" id="Zbe-A1-hQJ"/>
+                                <connections>
+                                    <action selector="onMaxIterationSlider:" target="XfG-lQ-9wD" id="OzA-Yk-C1D"/>
+                                </connections>
+                            </slider>
                         </subviews>
                     </view>
                 </viewController>
