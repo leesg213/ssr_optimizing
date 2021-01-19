@@ -70,7 +70,7 @@ float FindIntersection_Linear(float3 samplePosInTS,
     int2 sampleScreenPos = int2(samplePosInTS.xy * sceneInfo.ViewSize.xy);
     int2 endPosScreenPos = int2(vReflectionEndPosInTS.xy * sceneInfo.ViewSize.xy);
     int2 dp2 = endPosScreenPos - sampleScreenPos;
-    const int max_dist = max(abs(dp2.x), abs(dp2.y));
+    const uint max_dist = max(abs(dp2.x), abs(dp2.y));
     dp /= max_dist;
     
     float4 rayPosInTS = float4(samplePosInTS.xyz + dp, 0);
@@ -78,7 +78,7 @@ float FindIntersection_Linear(float3 samplePosInTS,
 	float4 rayStartPos = rayPosInTS;
 
     int32_t hitIndex = -1;
-    for(int i = 0;i<=max_dist && i<MAX_ITERATION;i += 4)
+    for(uint i = 0;i<=max_dist && i<sceneInfo.maxIteration;i += 4)
     {
         float depth0 = 0;
         float depth1 = 0;
@@ -96,21 +96,37 @@ float FindIntersection_Linear(float3 samplePosInTS,
         depth0 = tex_depth.sample(pointSampler, rayPosInTS0.xy).x;
 
         {
-            float thickness = rayPosInTS3.z - depth3;
-            hitIndex = (thickness>=0 && thickness < MAX_THICKNESS) ? (i+3) : hitIndex;
-        }
-        {
-            float thickness = rayPosInTS2.z - depth2;
-            hitIndex = (thickness>=0 && thickness < MAX_THICKNESS) ? (i+2) : hitIndex;
-        }
-        {
-            float thickness = rayPosInTS1.z - depth1;
-            hitIndex = (thickness>=0 && thickness < MAX_THICKNESS) ? (i+1) : hitIndex;
-        }
-        {
             float thickness = rayPosInTS0.z - depth0;
-            hitIndex = (thickness>=0 && thickness < MAX_THICKNESS) ? (i+0) : hitIndex;
+			if(thickness>=0 && thickness < MAX_THICKNESS)
+			{
+				hitIndex = i+0;
+				break;
+			}
         }
+		{
+			float thickness = rayPosInTS1.z - depth1;
+			if(thickness>=0 && thickness < MAX_THICKNESS)
+			{
+				hitIndex = i+1;
+				break;
+			}
+		}
+		{
+			float thickness = rayPosInTS2.z - depth2;
+			if(thickness>=0 && thickness < MAX_THICKNESS)
+			{
+				hitIndex = i+2;
+				break;
+			}
+		}
+		{
+			float thickness = rayPosInTS3.z - depth3;
+			if(thickness>=0 && thickness < MAX_THICKNESS)
+			{
+				hitIndex = i+3;
+				break;
+			}
+		}
 
         if(hitIndex != -1) break;
 
@@ -137,15 +153,15 @@ float2 getCell(float2 pos, float2 cell_count)
 	return float2(floor(pos*cell_count));
 }
 
-float3 intersectCellBoundary(float3 o, float3 d, float2 cell, float2 cell_count, float2 crossStep, float2 crossOffset, float min_z, float max_z)
+float3 intersectCellBoundary(float3 o, float3 d, float2 cell, float2 cell_count, float2 crossStep, float2 crossOffset)
 {
 	float3 intersection = 0;
 	
 	float2 index = cell + crossStep;
-	index /= cell_count;
-	index += crossOffset;
+	float2 boundary = index / cell_count;
+	boundary += crossOffset;
 	
-	float2 delta = index - o.xy;
+	float2 delta = boundary - o.xy;
 	delta /= d.xy;
 	float t = min(delta.x, delta.y);
 	
@@ -183,30 +199,30 @@ float FindIntersection_HiZ(float3 samplePosInTS,
                          const constant SceneInfo& sceneInfo,
                          thread float3& intersection)
 {
-    float3 ray = samplePosInTS.xyz;
-	float minZ = ray.z;
-    float maxZ = samplePosInTS.z + vReflDirInTS.z * maxTraceDistance;
-	float deltaZ = (maxZ - minZ);
-    float3 d = vReflDirInTS * maxTraceDistance;
-    
+	const int maxLevel = tex_hi_z.get_num_mip_levels()-1;
+	
     float2 crossStep = float2(vReflDirInTS.x>=0 ? 1 : -1, vReflDirInTS.y>=0 ? 1 : -1);
-	float2 crossOffset = crossStep  / sceneInfo.ViewSize / 128;
+	float2 crossOffset = crossStep / sceneInfo.ViewSize / 128;
     crossStep = saturate(crossStep);
     
+	float3 ray = samplePosInTS.xyz;
+	float minZ = ray.z;
+	float maxZ = ray.z + vReflDirInTS.z * maxTraceDistance;
+	float deltaZ = (maxZ - minZ);
+
+	float3 o = ray;
+	float3 d = vReflDirInTS * maxTraceDistance;
+	
 	int startLevel = 2;
 	int stopLevel = 0;
 	float2 startCellCount = getCellCount(startLevel, tex_hi_z);
 	
-	float3 o = ray;
     float2 rayCell = getCell(ray.xy, startCellCount);
-
-    ray = intersectCellBoundary(o, d, rayCell, startCellCount, crossStep, crossOffset*64, minZ, maxZ);
-    
-    const int maxLevel = tex_hi_z.get_num_mip_levels()-1;
+    ray = intersectCellBoundary(o, d, rayCell, startCellCount, crossStep, crossOffset*64);
     
     int level = startLevel;
-    int iter = 0;
-    while(level >=stopLevel && ray.z <= maxZ)
+	uint iter = 0;
+    while(level >=stopLevel && ray.z <= maxZ && iter<sceneInfo.maxIteration)
     {
         const float2 cellCount = getCellCount(level, tex_hi_z);
         const float2 oldCellIdx = getCell(ray.xy, cellCount);
@@ -218,10 +234,10 @@ float FindIntersection_HiZ(float3 samplePosInTS,
         
 		float thickness = level == 0 ? (ray.z - cell_minZ) : 0;
         bool crossed = thickness>MAX_THICKNESS || crossedCellBoundary(oldCellIdx, newCellIdx);
-        ray = crossed ? intersectCellBoundary(o, d, oldCellIdx, cellCount, crossStep, crossOffset, minZ, maxZ) : tmpRay;
+        ray = crossed ? intersectCellBoundary(o, d, oldCellIdx, cellCount, crossStep, crossOffset) : tmpRay;
         level = crossed ? min((float)maxLevel, level + 1.0f) : level-1;
 		
-        iter = iter + 1;
+		++iter;
     }
     
     bool intersected = level < stopLevel;

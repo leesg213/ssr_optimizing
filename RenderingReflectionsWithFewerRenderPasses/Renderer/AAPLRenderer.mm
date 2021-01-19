@@ -84,6 +84,7 @@ static const float         ActorRotationSpeed       = 1;
 	bool _AnimationEnabled;
 	bool _SSREnabled;
 	bool _SSRTechinque; // true : linear false : hi-z
+	uint32_t _maxIteration;
 }
 -(void)onToggleSSRButton:(NSButton *)button
 {
@@ -115,6 +116,12 @@ static const float         ActorRotationSpeed       = 1;
 	
 	anim_speed_factor = speed_min + (speed_max - speed_min) * ratio;
 }
+-(void)onMaxIterationSlider:(NSSlider *)slider
+{
+	_maxIteration = slider.intValue;
+	
+	printf("maxIteration : %u\n", _maxIteration);
+}
 - (nonnull instancetype)initWithMetalKitView:(nonnull MTKView *)mtkView
 {
     self = [super init];
@@ -128,6 +135,7 @@ static const float         ActorRotationSpeed       = 1;
 		_SSREnabled = false;
 		_SSRTechinque = true;
 		_AnimationEnabled = false;
+		_maxIteration = 1000;
     }
 
     return self;
@@ -751,6 +759,7 @@ static const float         ActorRotationSpeed       = 1;
         sceneInfo->ViewMat = viewMatrix;
         sceneInfo->ProjMat = projectionMatrix;
         sceneInfo->InvProjMat = matrix_inverse_transpose(matrix_transpose(projectionMatrix));
+		sceneInfo->maxIteration = _maxIteration;
     }
     // We update the shader parameters - frame constants :
     {

@@ -87,6 +87,7 @@ typedef struct
     matrix_float4x4 ViewMat;
     matrix_float4x4 ProjMat;
     matrix_float4x4 InvProjMat;
+	uint maxIteration;
 } SceneInfo;
 
 
