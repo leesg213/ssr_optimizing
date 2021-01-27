@@ -51,8 +51,8 @@ void ComputePosAndReflection(uint2 tid,
     
 	// Compute the maximum distance to trace before the ray goes outside of the visible area.
     outMaxDistance = outReflDirInTS.x>=0 ? (1 - outSamplePosInTS.x)/outReflDirInTS.x  : -outSamplePosInTS.x/outReflDirInTS.x;
-    outMaxDistance = min(outMaxDistance, outReflDirInTS.y<0 ? (-outSamplePosInTS.y/outReflDirInTS.y)  : ((1-outSamplePosInTS.y)/outReflDirInTS.y));
-    outMaxDistance = min(outMaxDistance, (1-outSamplePosInTS.z)/outReflDirInTS.z);
+    outMaxDistance = min(outMaxDistance, outReflDirInTS.y<0 ? (-outSamplePosInTS.y/outReflDirInTS.y) : ((1-outSamplePosInTS.y)/outReflDirInTS.y));
+    outMaxDistance = min(outMaxDistance, outReflDirInTS.z<0 ? (-outSamplePosInTS.z/outReflDirInTS.z) : ((1-outSamplePosInTS.z)/outReflDirInTS.z));
 }
 
 float FindIntersection_Linear(float3 samplePosInTS,
@@ -213,7 +213,7 @@ float FindIntersection_HiZ(float3 samplePosInTS,
 	float3 o = ray;
 	float3 d = vReflDirInTS * maxTraceDistance;
 	
-	int startLevel = 2;
+	int startLevel = 0;
 	int stopLevel = 0;
 	float2 startCellCount = getCellCount(startLevel, tex_hi_z);
 	
@@ -222,25 +222,33 @@ float FindIntersection_HiZ(float3 samplePosInTS,
     
     int level = startLevel;
 	uint iter = 0;
-    while(level >=stopLevel && ray.z <= maxZ && iter<sceneInfo.maxIteration)
+    float cell_minZ = 0;
+    bool isBackwardRay = vReflDirInTS.z<0;
+    float rayDir = isBackwardRay ? -1 : 1;
+    while(level >=stopLevel && ray.z*rayDir <= maxZ*rayDir && iter<sceneInfo.maxIteration)
     {
         const float2 cellCount = getCellCount(level, tex_hi_z);
         const float2 oldCellIdx = getCell(ray.xy, cellCount);
-		
-		float cell_minZ = getMinimumDepthPlane((oldCellIdx+0.5f)/cellCount, level, tex_hi_z);
-        float3 tmpRay = cell_minZ > ray.z ? intersectDepthPlane(o, d, (cell_minZ - minZ)/deltaZ) : ray;
+        
+        cell_minZ = getMinimumDepthPlane((oldCellIdx+0.5f)/cellCount, level, tex_hi_z);
+        float3 tmpRay = ((cell_minZ > ray.z) && !isBackwardRay) ? intersectDepthPlane(o, d, (cell_minZ - minZ)/deltaZ) : ray;
         
         const float2 newCellIdx = getCell(tmpRay.xy, cellCount);
         
-		float thickness = level == 0 ? (ray.z - cell_minZ) : 0;
-        bool crossed = thickness>MAX_THICKNESS || crossedCellBoundary(oldCellIdx, newCellIdx);
+        float thickness = level == 0 ? (ray.z - cell_minZ) : 0;
+        bool crossed = (isBackwardRay && (cell_minZ > ray.z)) || (thickness>(MAX_THICKNESS)) || crossedCellBoundary(oldCellIdx, newCellIdx);
         ray = crossed ? intersectCellBoundary(o, d, oldCellIdx, cellCount, crossStep, crossOffset) : tmpRay;
         level = crossed ? min((float)maxLevel, level + 1.0f) : level-1;
-		
-		++iter;
+        
+        ++iter;
     }
-    
-    bool intersected = level < stopLevel;
+    /*
+    constexpr sampler pointSampler(mip_filter::nearest);
+    float2 prevPos = ray.xy - normalize(vReflDirInTS.xy) / sceneInfo.ViewSize;
+    float prevDepth = tex_hi_z.sample(pointSampler, prevPos.xy).x;
+    bool intersected = (level < stopLevel) && (prevDepth<=(ray.z+0.01));
+     */
+    bool intersected = (level < stopLevel);
     intersection = ray;
 	
 	float intensity = intersected ? 1 : 0;
@@ -289,7 +297,7 @@ kernel void kernel_screen_space_reflection_linear(texture2d<float, access::sampl
 
         // Find intersection in texture space by tracing the reflection ray
         float3 intersection = 0;
-		if(vReflDirInTS.z>0.0)
+		//if(vReflDirInTS.z>0.0)
 		{
 			float intensity = FindIntersection_Linear(samplePosInTS, vReflDirInTS, maxTraceDistance, tex_depth, sceneInfo, intersection);
 			
@@ -334,7 +342,7 @@ kernel void kernel_screen_space_reflection_hi_z(texture2d<float, access::sample>
         
         // Find intersection in texture space by tracing the reflection ray
         float3 intersection = 0;
-        if(vReflDirInTS.z>0.0)
+        //if(vReflDirInTS.z>0.0)
         {
             float intensity = FindIntersection_HiZ(samplePosInTS, vReflDirInTS, maxTraceDistance, tex_hi_z, sceneInfo, intersection);
             
