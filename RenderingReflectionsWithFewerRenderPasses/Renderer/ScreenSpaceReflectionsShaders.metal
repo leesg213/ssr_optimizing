@@ -213,7 +213,7 @@ float FindIntersection_HiZ(float3 samplePosInTS,
 	float3 o = ray;
 	float3 d = vReflDirInTS * maxTraceDistance;
 	
-	int startLevel = 0;
+	int startLevel = 2;
 	int stopLevel = 0;
 	float2 startCellCount = getCellCount(startLevel, tex_hi_z);
 	
@@ -222,15 +222,15 @@ float FindIntersection_HiZ(float3 samplePosInTS,
     
     int level = startLevel;
 	uint iter = 0;
-    float cell_minZ = 0;
     bool isBackwardRay = vReflDirInTS.z<0;
     float rayDir = isBackwardRay ? -1 : 1;
+    
     while(level >=stopLevel && ray.z*rayDir <= maxZ*rayDir && iter<sceneInfo.maxIteration)
     {
         const float2 cellCount = getCellCount(level, tex_hi_z);
         const float2 oldCellIdx = getCell(ray.xy, cellCount);
         
-        cell_minZ = getMinimumDepthPlane((oldCellIdx+0.5f)/cellCount, level, tex_hi_z);
+        float cell_minZ = getMinimumDepthPlane((oldCellIdx+0.5f)/cellCount, level, tex_hi_z);
         float3 tmpRay = ((cell_minZ > ray.z) && !isBackwardRay) ? intersectDepthPlane(o, d, (cell_minZ - minZ)/deltaZ) : ray;
         
         const float2 newCellIdx = getCell(tmpRay.xy, cellCount);
@@ -242,12 +242,7 @@ float FindIntersection_HiZ(float3 samplePosInTS,
         
         ++iter;
     }
-    /*
-    constexpr sampler pointSampler(mip_filter::nearest);
-    float2 prevPos = ray.xy - normalize(vReflDirInTS.xy) / sceneInfo.ViewSize;
-    float prevDepth = tex_hi_z.sample(pointSampler, prevPos.xy).x;
-    bool intersected = (level < stopLevel) && (prevDepth<=(ray.z+0.01));
-     */
+    
     bool intersected = (level < stopLevel);
     intersection = ray;
 	
